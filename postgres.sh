@@ -1,0 +1,1 @@
+   docker run -d --name postgres-vault -e POSTGRES_PASSWORD=vault_key -p 5432:5432 -v postgres_data:/var/lib/postgresql/data postgres

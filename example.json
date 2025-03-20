@@ -1,0 +1,7 @@
+{
+	"root": "../root",
+	"database_url": "postgres://postgres:vault_key@localhost:5432/postgres",
+	"jwt_secret": "secret",
+	"username": "user",
+	"password": "password"
+}
