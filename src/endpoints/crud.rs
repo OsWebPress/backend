@@ -1,22 +1,32 @@
-use actix_web::{web, HttpRequest, HttpResponse, Responder};
+use actix_web::{web, HttpRequest, HttpResponse, Responder, guard};
 use crate::config;
 use std::fs;
 use std::path::Path;
+use crate::jwt;
 
 // register the endpoint.
 pub fn crud_config(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::resource("carbon/{tail:.*}")
-        .route(web::get().to(get_carbon))
-        .route(web::post().to(post_carbon))
+            .guard(guard::fn_guard(auth_guard))
+            .route(web::get().to(get_carbon))
+            .route(web::post().to(post_carbon))
         );
 }
 
-// async fn test_handler(data: web::Data<config::PressConfig>) -> impl Responder {
-//     HttpResponse::Ok().body(data.settings.root.clone())
-// }
-
-async fn get_carbon(req: HttpRequest, data: web::Data<config::PressConfig>) -> impl Responder {
+fn auth_guard(ctx: &guard::GuardContext) -> bool {
+    if let Some(claims) = ctx.req_data().get::<jwt::Claims>() {
+        println!("Claims: User Role: {}", claims.role);
+    } else {
+        println!("No claims found");
+        return false;
+    }
+    return true;
+}
+// _claims can be used for file permissions if we want to lock them in the future.
+// will only lock editing them.
+// we can make a test endpoint available which can be used to chekc if you can edit a file or add it into the data we send about all the files in the root for the editor.
+async fn get_carbon(req: HttpRequest, data: web::Data<config::PressConfig>, _claims: web::ReqData<jwt::Claims>) -> impl Responder {
     let tail = req.match_info().get("tail").unwrap_or_default();
 
     // Format the path to start with root and the file to be of type markdown.
@@ -25,7 +35,7 @@ async fn get_carbon(req: HttpRequest, data: web::Data<config::PressConfig>) -> i
     let content = fs::read_to_string(path);
     match content {
         Ok(file_content) => HttpResponse::Ok().body(file_content),
-        Err(E) => HttpResponse::NotFound().body("Not found."),
+        Err(_e) => HttpResponse::NotFound().body("Not found."),
     }
 }
 

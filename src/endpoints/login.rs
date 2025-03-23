@@ -1,4 +1,4 @@
-use actix_web::{web, HttpRequest, HttpResponse, Responder};
+use actix_web::{web, HttpResponse, Responder};
 use serde::{Serialize, Deserialize};
 use crate::config;
 use crate::database;
@@ -6,7 +6,7 @@ use crate::jwt;
 use anyhow;
 use argon2::{
     password_hash::{
-        self, rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString
+        PasswordHash, PasswordVerifier
     },
     Argon2
 };
@@ -14,8 +14,9 @@ use argon2::{
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct EpUser {
-    username: String,
-    password: String,
+    pub username: String,
+    pub password: String,
+	pub role: String,
 }
 
 // register the login endpoint.
@@ -44,7 +45,7 @@ async fn verify_user(user: EpUser,  data: web::Data<config::PressConfig>) -> any
 	}
 }
 
-async fn post_login(req: HttpRequest, body: web::Bytes, data: web::Data<config::PressConfig>) -> impl Responder {
+async fn post_login(body: web::Bytes, data: web::Data<config::PressConfig>) -> impl Responder {
 	let user: EpUser = serde_json::from_slice(&body).unwrap();
 
 	let verified = verify_user(user, data).await;
@@ -61,10 +62,7 @@ async fn post_login(req: HttpRequest, body: web::Bytes, data: web::Data<config::
 	}
 
 	match jwt {
-		Ok(token) => {
-			let response = HttpResponse::Ok().body(token);
-			response
-		}
-		Err(e) => HttpResponse::Unauthorized().finish(),
+		Ok(token) => HttpResponse::Ok().body(token),
+		Err(_e) => HttpResponse::Unauthorized().finish(),
 	}
 }

@@ -1,31 +1,61 @@
 use serde::{Deserialize, Serialize};
-use sqlx::postgres::PgPoolOptions;
+use sqlx::postgres::{PgPoolOptions, PgQueryResult};
 use sqlx::{ FromRow, PgPool, Result};
 use sqlx;
 use crate::config;
-use time;
 use argon2::{
     password_hash::{
         rand_core::OsRng,
-        PasswordHasher, PasswordVerifier, SaltString
+        PasswordHasher, SaltString
     },
     Argon2
 };
+use std::fmt;
 use chrono::{DateTime, Utc}; // Ensure chrono is in Cargo.toml
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
 #[derive(Debug, sqlx::Type)]
 #[sqlx(type_name = "role", rename_all = "lowercase")]
 pub enum Role {
     Admin,
     Mod,
     User,
+    None,
 }
 
-#[derive(Debug, FromRow)]
+impl Role {
+    pub fn from_str(s: &str) -> Self {
+        match s {
+            "Admin" => Role::Admin,
+            "Mod" => Role::Mod,
+            "User" => Role::User,
+            _ => Role::None,
+        }
+    }
+
+    fn to_str(&self) -> &'static str {
+        match self {
+            Role::Admin => "Admin",
+            Role::Mod => "Mod",
+            Role::User => "User",
+            Role::None => "None",
+        }
+    }
+}
+
+impl fmt::Display for Role {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // Match over the enum and display a custom string for each variant
+        write!(f, "{}", self.to_str())
+    }
+}
+
+#[derive(Debug, FromRow, Serialize, Deserialize)]
 pub struct User {
     pub id: i32,
     pub username: String,
+
+    #[serde(skip_serializing)]
     pub password_hash: String,
     pub role: Role,
     pub created_at: DateTime<Utc>,
@@ -123,6 +153,15 @@ pub async fn get_user(pool: &PgPool, username: &str) -> Result<User, sqlx::Error
 		.await;
 
 	result
+}
+
+pub async fn delete_user(pool: &PgPool, username: &str) -> Result<PgQueryResult, sqlx::Error> {
+    sqlx::query("DELETE FROM users WHERE username = $1").bind(username).execute(pool).await
+}
+
+pub async fn get_all_users(pool: &PgPool) -> Result<Vec<User>, sqlx::Error> {
+
+    sqlx::query_as::<_, User>("SELECT * FROM users").fetch_all(pool).await
 }
 
 async fn add_default_user(pool: &PgPool, config: &mut config::PressConfig) {
