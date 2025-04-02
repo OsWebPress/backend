@@ -2,6 +2,7 @@ use jsonwebtoken::{encode, decode, Header, EncodingKey, DecodingKey, Validation,
 use serde::{Serialize, Deserialize};
 use chrono::Utc;
 use crate::database::Role;
+use crate::config;
 use anyhow;
 use actix_web::{
 	HttpMessage,
@@ -18,10 +19,10 @@ pub struct Claims {
 	exp: usize,
 }
 
-pub fn create_jwt(user_id: i32, role: Role) ->anyhow::Result<String, anyhow::Error> {
+pub fn create_jwt(user_id: i32, role: Role, secret: &String) ->anyhow::Result<String, anyhow::Error> {
     let expiration = Utc::now().timestamp() as usize + 3600; // 1 hour from now
     let my_claims = Claims { user_id: user_id, role: role, exp: expiration };
-    let key = EncodingKey::from_secret("secret_key".as_ref());
+    let key = EncodingKey::from_secret(secret.as_ref());
 	// get secret fromt eh db
 
     // encode(&Header::default(), &my_claims, &key).unwrap()
@@ -42,8 +43,19 @@ pub async fn middleware_decoder(
     next: Next<impl MessageBody>,
 ) -> Result<ServiceResponse<impl MessageBody>, Error> {
     // pre-processing
-	// here we need to decode the jwt if it is there and if not do nothing.
-    let key = DecodingKey::from_secret("secret_key".as_ref());
+	let data = req.app_data::<actix_web::web::Data<config::PressConfig>>();
+	let conf;
+	match data {
+		Some(configdata) => {
+			conf = (*configdata).clone();
+		}
+		None => {
+			// bit ugly to early return here
+			return next.call(req).await
+		}
+	}
+	// let key = DecodingKey::from_secret(config_data.get_ref().as_ref());
+	let key = DecodingKey::from_secret(conf.settings.jwt_secret.as_ref());
 	let validation = Validation::new(Algorithm::HS256);
 
     if let Some(auth_header) = req.headers().get("Authorization") {

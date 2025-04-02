@@ -8,9 +8,8 @@ use crate::jwt;
 pub fn crud_config(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::resource("carbon/{tail:.*}")
-            .guard(guard::fn_guard(auth_guard))
-            .route(web::get().to(get_carbon))
-            .route(web::post().to(post_carbon))
+        .route(web::get().to(get_carbon))
+        .route(web::post().to(post_carbon).guard(guard::fn_guard(auth_guard)))
         );
 }
 
@@ -26,7 +25,7 @@ fn auth_guard(ctx: &guard::GuardContext) -> bool {
 // _claims can be used for file permissions if we want to lock them in the future.
 // will only lock editing them.
 // we can make a test endpoint available which can be used to chekc if you can edit a file or add it into the data we send about all the files in the root for the editor.
-async fn get_carbon(req: HttpRequest, data: web::Data<config::PressConfig>, _claims: web::ReqData<jwt::Claims>) -> impl Responder {
+async fn get_carbon(req: HttpRequest, data: web::Data<config::PressConfig>) -> impl Responder {
     let tail = req.match_info().get("tail").unwrap_or_default();
 
     // Format the path to start with root and the file to be of type markdown.

@@ -161,7 +161,7 @@ pub async fn delete_user(pool: &PgPool, username: &str) -> Result<PgQueryResult,
 
 pub async fn get_all_users(pool: &PgPool) -> Result<Vec<User>, sqlx::Error> {
 
-    sqlx::query_as::<_, User>("SELECT * FROM users").fetch_all(pool).await
+    sqlx::query_as::<_, User>("SELECT * FROM users  ORDER BY created_at DESC").fetch_all(pool).await
 }
 
 async fn add_default_user(pool: &PgPool, config: &mut config::PressConfig) {

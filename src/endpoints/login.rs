@@ -11,12 +11,23 @@ use argon2::{
     Argon2
 };
 
-
 #[derive(Serialize, Deserialize, Debug)]
 pub struct EpUser {
     pub username: String,
     pub password: String,
+
+	#[serde(default = "default_role")]
 	pub role: String,
+	#[serde(default = "default_id")]
+	pub id: i32,
+}
+
+fn default_role() -> String {
+	"User".to_string()
+}
+
+fn default_id() -> i32 {
+	0
 }
 
 // register the login endpoint.
@@ -27,7 +38,7 @@ pub fn login_config(cfg: &mut web::ServiceConfig) {
         );
 }
 
-async fn verify_user(user: EpUser,  data: web::Data<config::PressConfig>) -> anyhow::Result<database::User, anyhow::Error> {
+async fn verify_user(user: EpUser,  data: &web::Data<config::PressConfig>) -> anyhow::Result<database::User, anyhow::Error> {
 	let db_pool = data.pool.clone().unwrap();
 	let db_user = database::get_user(&db_pool, &user.username).await?;
 
@@ -48,13 +59,13 @@ async fn verify_user(user: EpUser,  data: web::Data<config::PressConfig>) -> any
 async fn post_login(body: web::Bytes, data: web::Data<config::PressConfig>) -> impl Responder {
 	let user: EpUser = serde_json::from_slice(&body).unwrap();
 
-	let verified = verify_user(user, data).await;
+	let verified = verify_user(user, &data).await;
 	let jwt;
 
 	// need to implement fmt::Display for role.
 	match verified {
 		Ok(user) => {
-			jwt = jwt::create_jwt(user.id, user.role);
+			jwt = jwt::create_jwt(user.id, user.role, &data.settings.jwt_secret);
 		}
 		Err(_e) => {
 			return HttpResponse::Unauthorized().finish();

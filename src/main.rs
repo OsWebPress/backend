@@ -1,5 +1,6 @@
 use actix_web::{App, HttpServer, web, HttpResponse};
 use actix_web::middleware::from_fn;
+use actix_cors::Cors;
 mod endpoints;
 mod config;
 mod database;
@@ -17,7 +18,14 @@ async fn main() -> std::io::Result<()> {
     config.pool = Some(pool);
     let state = web::Data::new(config);
 
-    HttpServer::new(move || App::new().app_data(state.clone())
+    HttpServer::new(move || App::new()
+        .app_data(state.clone())
+        .wrap(
+            Cors::default()
+                .allow_any_origin()
+                .allow_any_method()
+                .allow_any_header(),
+        )
         .wrap(from_fn(jwt::middleware_decoder))
         .configure(endpoints::crud::crud_config)
         .configure(endpoints::login::login_config)
