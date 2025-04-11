@@ -1,3 +1,4 @@
-pub mod crud; // expose the crud module.
+pub mod carbon; // markdown files
+pub mod components;
 pub mod login;
 pub mod admin;

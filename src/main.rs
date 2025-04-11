@@ -27,7 +27,8 @@ async fn main() -> std::io::Result<()> {
                 .allow_any_header(),
         )
         .wrap(from_fn(jwt::middleware_decoder))
-        .configure(endpoints::crud::crud_config)
+        .configure(endpoints::carbon::carbon_config)
+		.configure(endpoints::components::component_config)
         .configure(endpoints::login::login_config)
         .configure(endpoints::admin::admin_config)
         .default_service(web::route().to(handle_unauthorized))
