@@ -5,6 +5,7 @@ mod endpoints;
 mod config;
 mod database;
 mod jwt;
+mod utils;
 
 async fn handle_unauthorized() -> HttpResponse {
     HttpResponse::Unauthorized().body("Unauthorized!")
@@ -30,6 +31,7 @@ async fn main() -> std::io::Result<()> {
         .configure(endpoints::carbon::carbon_config)
 		.configure(endpoints::components::component_config)
 		.configure(endpoints::navigation::navigation_config)
+		.configure(endpoints::ronly::ronly_config)
         .configure(endpoints::login::login_config)
         .configure(endpoints::admin::admin_config)
         .default_service(web::route().to(handle_unauthorized))
