@@ -68,15 +68,15 @@ pub async fn init_db(config: &mut config::PressConfig) -> PgPool {
 	// add the default user as moderator?
 	add_default_user(&pool, config).await;
 
-	let user_one = get_user(&pool, "user").await;
-	match user_one {
-        Ok(user) => {
-            println!("username: {}, password (hashed?) {}", user.username, user.password_hash);
-		}
-		Err(e) => {
-            println!("ERROR could not find the user! error: {:?}", e)
-		}
-	}
+	// let user_one = get_user(&pool, "user").await;
+	// match user_one {
+    //     Ok(user) => {
+    //         println!("username: {}, password (hashed?) {}", user.username, user.password_hash);
+	// 	}
+	// 	Err(e) => {
+    //         println!("ERROR could not find the user! error: {:?}", e)
+	// 	}
+	// }
 
 	pool
 }

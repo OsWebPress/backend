@@ -34,6 +34,7 @@ async fn main() -> std::io::Result<()> {
 		.configure(endpoints::ronly::ronly_config)
         .configure(endpoints::login::login_config)
         .configure(endpoints::admin::admin_config)
+		.configure(endpoints::images::images_config)
         .default_service(web::route().to(handle_unauthorized))
         )
             .bind("127.0.0.1:8080")?

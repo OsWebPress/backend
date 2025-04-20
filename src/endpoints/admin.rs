@@ -1,36 +1,17 @@
 use actix_web::{web, HttpResponse, Responder, guard};
 use crate::config;
 use crate::database::Role;
-use crate::jwt;
 use crate::database;
-use crate::endpoints::login;
-
-// create admin endpoint
-
-// configure the endpoint
-// add the auth guard for admin role
-
-// update username / password
-// create a new user.
-// Remove user
-// Change user Permission level
+use crate::endpoints::{login, _auth};
 
 pub fn admin_config(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("admin")
-            .guard(guard::fn_guard(auth_guard))
+            .guard(guard::fn_guard(_auth::admin_guard))
             .route("/users", web::get().to(get_users))
             .route("user", web::post().to(post_user))
 			.route("/user", web::delete().to(delete_user))
         );
-}
-
-fn auth_guard(ctx: &guard::GuardContext) -> bool {
-    if let Some(claims) = ctx.req_data().get::<jwt::Claims>() {
-		return claims.role == database::Role::Admin;
-	} else {
-        return false;
-    }
 }
 
 // get a list of all users.
