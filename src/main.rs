@@ -23,6 +23,7 @@ async fn main() -> std::io::Result<()> {
         .app_data(state.clone())
         .wrap(
             Cors::default()
+				// .allowed_origin("https://localhost:444")
                 .allow_any_origin()
                 .allow_any_method()
                 .allow_any_header(),

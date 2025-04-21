@@ -19,9 +19,9 @@ pub struct Claims {
 	exp: usize,
 }
 
-pub fn create_jwt(user_id: i32, role: Role, secret: &String) ->anyhow::Result<String, anyhow::Error> {
+pub fn create_jwt(user_id: i32, role: &Role, secret: &String) ->anyhow::Result<String, anyhow::Error> {
     let expiration = Utc::now().timestamp() as usize + 3600; // 1 hour from now
-    let my_claims = Claims { user_id: user_id, role: role, exp: expiration };
+    let my_claims = Claims { user_id: user_id, role: role.clone(), exp: expiration };
     let key = EncodingKey::from_secret(secret.as_ref());
 	// get secret fromt eh db
 
@@ -58,16 +58,15 @@ pub async fn middleware_decoder(
 	let key = DecodingKey::from_secret(conf.settings.jwt_secret.as_ref());
 	let validation = Validation::new(Algorithm::HS256);
 
-    if let Some(auth_header) = req.headers().get("Authorization") {
-        if let Ok(auth_str) = auth_header.to_str() {
-			if let Ok(token) = decode::<Claims>(auth_str, &key, &validation)
-				{
-					// check if the JWT has expired yet.
-					// needs to not handle this when someone is trying to login while having an outdated token.
+	if let Some(cookie) = req.cookie("jwt_token") {
+		let token_str = cookie.value();
 
-					req.extensions_mut().insert(token.claims);
-				}
-        }
+		if let Ok(token) = decode::<Claims>(token_str, &key, &validation) {
+			// Optionally check expiration here manually if needed,
+			// or ensure `validation.validate_exp = true`
+
+			req.extensions_mut().insert(token.claims);
+		}
 	}
 
 	// Call the actual handler (or next middleware).

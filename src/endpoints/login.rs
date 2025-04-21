@@ -1,4 +1,5 @@
-use actix_web::{web, HttpResponse, Responder};
+use actix_web::{web, HttpMessage, HttpRequest, HttpResponse, Responder};
+use actix_web::cookie::Cookie;
 use serde::{Serialize, Deserialize};
 use crate::config;
 use crate::database;
@@ -38,7 +39,7 @@ pub fn login_config(cfg: &mut web::ServiceConfig) {
         );
 }
 
-async fn verify_user(user: EpUser,  data: &web::Data<config::PressConfig>) -> anyhow::Result<database::User, anyhow::Error> {
+async fn verify_user(user: &EpUser,  data: &web::Data<config::PressConfig>) -> anyhow::Result<database::User, anyhow::Error> {
 	let db_pool = data.pool.clone().unwrap();
 	let db_user = database::get_user(&db_pool, &user.username).await?;
 
@@ -56,24 +57,48 @@ async fn verify_user(user: EpUser,  data: &web::Data<config::PressConfig>) -> an
 	}
 }
 
-async fn post_login(body: web::Bytes, data: web::Data<config::PressConfig>) -> impl Responder {
+async fn post_login(req: HttpRequest, body: web::Bytes, data: web::Data<config::PressConfig>) -> impl Responder {
+	let extensions = req.extensions();
+	if let Some(claims) = extensions.get::<jwt::Claims>() {
+		return HttpResponse::Ok().json(serde_json::json!({
+			"role": claims.role,
+		}));
+	} else {
+		if body.is_empty() {
+			return HttpResponse::ExpectationFailed().finish()
+		}
+	}
+
+
+
 	let user: EpUser = serde_json::from_slice(&body).unwrap();
 
-	let verified = verify_user(user, &data).await;
+	let verified = verify_user(&user, &data).await;
 	let jwt;
 
 	// need to implement fmt::Display for role.
 	match verified {
 		Ok(user) => {
-			jwt = jwt::create_jwt(user.id, user.role, &data.settings.jwt_secret);
+			jwt = jwt::create_jwt(user.id, &user.role, &data.settings.jwt_secret);
+			match jwt {
+				Ok(token) => {
+					let cookie = Cookie::build("jwt_token", token)
+						.http_only(true)
+						.secure(true)
+						.same_site(actix_web::cookie::SameSite::Strict)
+						.finish();
+					return HttpResponse::Ok()
+					.cookie(cookie)
+					.json(serde_json::json!({
+						"role": user.role,
+					}))
+				}
+				Err(_e) => HttpResponse::Unauthorized().finish(),
+			}
 		}
 		Err(_e) => {
 			return HttpResponse::Unauthorized().finish();
 		}
 	}
 
-	match jwt {
-		Ok(token) => HttpResponse::Ok().body(token),
-		Err(_e) => HttpResponse::Unauthorized().finish(),
-	}
 }
