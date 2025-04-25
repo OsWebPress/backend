@@ -10,13 +10,13 @@ pub struct FileNode {
     children: Option<Vec<FileNode>>,
 }
 
-pub fn build_tree(path: &PathBuf) -> FileNode {
+pub fn build_tree(path: &PathBuf, root_path: &String) -> FileNode {
     let name = path
 					.file_name()
 					.unwrap_or_default()
 					.to_string_lossy()
 					.into_owned();
-    let path_str = path.strip_prefix("../root").unwrap_or(path).to_string_lossy().into_owned();
+    let path_str = path.strip_prefix(root_path).unwrap_or(path).to_string_lossy().into_owned();
     let is_dir = path.is_dir();
 
     let children = if is_dir {
@@ -24,7 +24,7 @@ pub fn build_tree(path: &PathBuf) -> FileNode {
         if let Ok(read_dir) = std::fs::read_dir(path) {
             for entry in read_dir.flatten() {
                 let child_path = entry.path();
-                nodes.push(build_tree(&child_path));
+                nodes.push(build_tree(&child_path, &root_path));
             }
         }
         Some(nodes)
