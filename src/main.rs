@@ -23,8 +23,6 @@ async fn main() -> std::io::Result<()> {
         .app_data(state.clone())
         .wrap(
             Cors::default()
-				// .allowed_origin("https://localhost:444")
-                .allow_any_origin()
                 .allow_any_method()
                 .allow_any_header(),
         )
@@ -38,7 +36,7 @@ async fn main() -> std::io::Result<()> {
 		.configure(endpoints::images::images_config)
         .default_service(web::route().to(handle_unauthorized))
         )
-            .bind("127.0.0.1:8080")?
+            .bind("0.0.0.0:8080")?
             .run()
             .await
 }

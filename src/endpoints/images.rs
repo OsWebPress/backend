@@ -1,7 +1,6 @@
 use actix_web::{web, HttpRequest, HttpResponse, Responder, guard};
 use crate::config;
 use std::fs;
-// use std::path::Path;
 use crate::endpoints::_auth;
 use actix_multipart::Multipart;
 use futures_util::StreamExt;
@@ -12,6 +11,7 @@ use std::io::Write;
 pub fn images_config(cfg: &mut web::ServiceConfig) {
     cfg
 	.service(web::resource("images/upload")
+	.app_data(web::PayloadConfig::new(1 << 25))
 	.route(web::post().to(save_images).guard(guard::fn_guard(_auth::role_guard))))
 	.service(
         web::resource("images/{tail:.*}")
