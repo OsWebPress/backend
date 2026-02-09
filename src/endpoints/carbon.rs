@@ -1,4 +1,4 @@
-use actix_web::{web, HttpRequest, HttpResponse, Responder, guard};
+use actix_web::{http::header::ContentType, web, HttpRequest, HttpResponse, Responder, guard};
 use crate::config;
 use std::fs;
 use std::path::Path;
@@ -25,7 +25,10 @@ async fn get_carbon(req: HttpRequest, data: web::Data<config::PressConfig>) -> i
 
     let content = fs::read_to_string(path);
     match content {
-        Ok(file_content) => HttpResponse::Ok().body(file_content),
+        Ok(file_content) => HttpResponse::Ok()
+			.content_type(ContentType::plaintext())
+			.body(file_content)
+			,
         Err(_e) => HttpResponse::NotFound().body("Not found."),
     }
 }
