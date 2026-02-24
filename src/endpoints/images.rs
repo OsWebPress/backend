@@ -1,4 +1,4 @@
-use actix_web::{web, HttpRequest, HttpResponse, Responder, guard};
+use actix_web::{http::header::ContentType, web, HttpRequest, HttpResponse, Responder, guard};
 use crate::config;
 use std::fs;
 use crate::endpoints::_auth;
@@ -13,26 +13,7 @@ pub fn images_config(cfg: &mut web::ServiceConfig) {
 	.service(web::resource("images/upload")
 	.app_data(web::PayloadConfig::new(1 << 25))
 	.route(web::post().to(save_images).guard(guard::fn_guard(_auth::role_guard))))
-	.service(
-        web::resource("images/{tail:.*}")
-        .route(web::get().to(get_images))
-	);
-}
-
-async fn get_images(req: HttpRequest, data: web::Data<config::PressConfig>) -> impl Responder {
-    let tail = req.match_info().get("tail").unwrap_or_default();
-
-    // Format the path to start with root and the file to be of type markdown.
-    let path = format!("{}/images/{}", data.settings.root.clone(), tail);
-
-    let content = fs::read(&path);
-    match content {
-        Ok(file_content) => HttpResponse::Ok().body(file_content),
-        Err(_e) => {
-			println!("path: {}", path);
-			HttpResponse::NotFound().body("Not found.")
-		}
-    }
+	;
 }
 
 async fn save_images(mut payload: Multipart, data: web::Data<config::PressConfig>) -> impl Responder {
